@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  pawcast-db:
+    image: postgres:16
+    container_name: pawcast-db
+    environment:
+      POSTGRES_DB: pawcast
+      POSTGRES_USER: pawcast
+      POSTGRES_PASSWORD: pawcast_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - pawcast-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pawcast -d pawcast"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pawcast-postgres-data:
