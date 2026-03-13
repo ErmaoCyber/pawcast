@@ -4,6 +4,9 @@ using PawCast.Application.Services;
 using PawCast.Domain.Services;
 using PawCast.Infrastructure.Clients;
 using PawCast.Infrastructure.Persistence;
+using PawCast.Api.Middleware;
+using Microsoft.AspNetCore.Mvc;
+using PawCast.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +22,26 @@ builder.Services.AddDbContext<PawCastDbContext>(options =>
 
 builder.Services.Configure<OpenMeteoOptions>(
     builder.Configuration.GetSection(OpenMeteoOptions.SectionName));
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value?.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray());
+
+        return new BadRequestObjectResult(new
+        {
+            code = "validation_error",
+            message = "One or more validation errors occurred.",
+            traceId = context.HttpContext.TraceIdentifier,
+            errors
+        });
+    };
+});
 
 builder.Services.AddHttpClient("OpenMeteoWeather", client =>
 {
@@ -47,8 +70,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+public partial class Program { }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PawCast.Api.Models;
 using PawCast.Application.Services;
 
 namespace PawCast.Api.Controllers;
@@ -16,27 +17,28 @@ public class WalkIndexController : ControllerBase
 
     [HttpGet("current")]
     public async Task<IActionResult> GetCurrent(
-        [FromQuery] decimal lat,
-        [FromQuery] decimal lon,
+        [FromQuery] WalkIndexCurrentQueryRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _service.GetCurrentAsync(lat, lon, cancellationToken);
+        var result = await _service.GetCurrentAsync(
+            request.Lat,
+            request.Lon,
+            cancellationToken);
+
         return Ok(result);
     }
 
     [HttpGet("forecast")]
     public async Task<IActionResult> GetForecast(
-        [FromQuery] decimal lat,
-        [FromQuery] decimal lon,
-        [FromQuery] int hours = 24,
+        [FromQuery] WalkIndexForecastQueryRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (hours <= 0 || hours > 72)
-        {
-            return BadRequest("hours must be between 1 and 72.");
-        }
+        var result = await _service.GetForecastAsync(
+            request.Lat,
+            request.Lon,
+            request.Hours,
+            cancellationToken);
 
-        var result = await _service.GetForecastAsync(lat, lon, hours, cancellationToken);
         return Ok(result);
     }
 }
