@@ -154,7 +154,8 @@ public class OpenMeteoWeatherDataProvider : IWeatherDataProvider
             }
 
             merged.Add(new WeatherForecastPoint(
-                Time: DateTimeOffset.Parse(time),
+                // Time: DateTimeOffset.Parse(time),
+                Time: DateTimeOffset.Parse(time).ToUniversalTime(),
                 TemperatureC: weatherItem.Temperature.Value,
                 WindKph: weatherItem.Wind.Value,
                 PrecipitationProbability: weatherItem.PrecipitationProbability.Value,

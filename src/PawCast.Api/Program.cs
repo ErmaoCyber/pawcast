@@ -7,6 +7,7 @@ using PawCast.Infrastructure.Persistence;
 using PawCast.Api.Middleware;
 using Microsoft.AspNetCore.Mvc;
 using PawCast.Api.Models;
+using PawCast.Infrastructure.Persistence.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +58,7 @@ builder.Services.AddHttpClient("OpenMeteoAirQuality", client =>
 
 builder.Services.AddScoped<WalkIndexCalculator>();
 builder.Services.AddScoped<WalkIndexQueryService>();
+builder.Services.AddScoped<IWalkIndexRepository, WalkIndexRepository>();
 builder.Services.AddScoped<IWeatherDataProvider, OpenMeteoWeatherDataProvider>();
 
 builder.Services.AddEndpointsApiExplorer();

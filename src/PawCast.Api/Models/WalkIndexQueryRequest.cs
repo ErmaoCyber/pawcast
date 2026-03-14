@@ -22,3 +22,15 @@ public class WalkIndexForecastQueryRequest
     [Range(1, 72)]
     public int Hours { get; set; } = 24;
 }
+
+public class WalkIndexHistoryQueryRequest
+{
+    [Range(-90, 90)]
+    public decimal Lat { get; set; }
+
+    [Range(-180, 180)]
+    public decimal Lon { get; set; }
+
+    [Range(1, 30)]
+    public int Days { get; set; } = 7;
+}

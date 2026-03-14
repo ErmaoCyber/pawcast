@@ -41,4 +41,18 @@ public class WalkIndexController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory(
+    [FromQuery] WalkIndexHistoryQueryRequest request,
+    CancellationToken cancellationToken = default)
+    {
+        var result = await _service.GetHistoryAsync(
+            request.Lat,
+            request.Lon,
+            request.Days,
+            cancellationToken);
+
+        return Ok(result);
+    }
 }
