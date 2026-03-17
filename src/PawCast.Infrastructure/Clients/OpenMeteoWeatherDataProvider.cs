@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PawCast.Application.Abstractions;
 using PawCast.Application.DTOs;
@@ -9,13 +10,16 @@ public class OpenMeteoWeatherDataProvider : IWeatherDataProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly OpenMeteoOptions _options;
+    private readonly ILogger<OpenMeteoWeatherDataProvider> _logger;
 
     public OpenMeteoWeatherDataProvider(
         IHttpClientFactory httpClientFactory,
-        IOptions<OpenMeteoOptions> options)
+        IOptions<OpenMeteoOptions> options,
+        ILogger<OpenMeteoWeatherDataProvider> logger)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.Value;
+        _logger = logger;
     }
 
     public async Task<WeatherForecastPoint> GetCurrentAsync(
@@ -38,15 +42,30 @@ public class OpenMeteoWeatherDataProvider : IWeatherDataProvider
             throw new ArgumentOutOfRangeException(nameof(hours), "Hours must be greater than zero.");
         }
 
+        _logger.LogInformation(
+            "Fetching Open-Meteo forecast data. Latitude={Latitude}, Longitude={Longitude}, Hours={Hours}",
+            latitude,
+            longitude,
+            hours);
+
         var weatherTask = GetWeatherAsync(latitude, longitude, hours, cancellationToken);
         var airQualityTask = GetAirQualityAsync(latitude, longitude, hours, cancellationToken);
 
         await Task.WhenAll(weatherTask, airQualityTask);
 
-        return MergeHourlyData(
+        var merged = MergeHourlyData(
             weatherTask.Result,
             airQualityTask.Result,
             hours);
+
+        _logger.LogInformation(
+            "Successfully merged Open-Meteo forecast data. Latitude={Latitude}, Longitude={Longitude}, Hours={Hours}, Points={Points}",
+            latitude,
+            longitude,
+            hours,
+            merged.Count);
+
+        return merged;
     }
 
     private async Task<WeatherForecastApiResponse> GetWeatherAsync(
@@ -62,10 +81,27 @@ public class OpenMeteoWeatherDataProvider : IWeatherDataProvider
             $"&hourly=temperature_2m,wind_speed_10m,precipitation_probability" +
             $"&forecast_hours={hours}&timezone=GMT";
 
-        using var response = await client.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        _logger.LogInformation(
+            "Requesting weather forecast from Open-Meteo. Url={Url}",
+            url);
 
-        var payload = await response.Content.ReadFromJsonAsync<WeatherForecastApiResponse>(cancellationToken: cancellationToken)
+        using var response = await client.GetAsync(url, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            _logger.LogError(
+                "Weather API request failed. StatusCode={StatusCode}, Body={Body}",
+                (int)response.StatusCode,
+                body);
+
+            throw new HttpRequestException(
+                $"Weather API request failed with status code {(int)response.StatusCode}.");
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<WeatherForecastApiResponse>(
+                          cancellationToken: cancellationToken)
                       ?? throw new InvalidOperationException("Weather API returned empty payload.");
 
         if (payload.Hourly is null)
@@ -89,10 +125,27 @@ public class OpenMeteoWeatherDataProvider : IWeatherDataProvider
             $"&hourly=pm2_5,uv_index" +
             $"&forecast_hours={hours}&timezone=GMT";
 
-        using var response = await client.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        _logger.LogInformation(
+            "Requesting air quality forecast from Open-Meteo. Url={Url}",
+            url);
 
-        var payload = await response.Content.ReadFromJsonAsync<AirQualityApiResponse>(cancellationToken: cancellationToken)
+        using var response = await client.GetAsync(url, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            _logger.LogError(
+                "Air quality API request failed. StatusCode={StatusCode}, Body={Body}",
+                (int)response.StatusCode,
+                body);
+
+            throw new HttpRequestException(
+                $"Air quality API request failed with status code {(int)response.StatusCode}.");
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<AirQualityApiResponse>(
+                          cancellationToken: cancellationToken)
                       ?? throw new InvalidOperationException("Air quality API returned empty payload.");
 
         if (payload.Hourly is null)
@@ -154,7 +207,6 @@ public class OpenMeteoWeatherDataProvider : IWeatherDataProvider
             }
 
             merged.Add(new WeatherForecastPoint(
-                // Time: DateTimeOffset.Parse(time),
                 Time: DateTimeOffset.Parse(time).ToUniversalTime(),
                 TemperatureC: weatherItem.Temperature.Value,
                 WindKph: weatherItem.Wind.Value,

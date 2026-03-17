@@ -7,6 +7,7 @@ using PawCast.Application.Abstractions;
 using PawCast.Application.Services;
 using PawCast.Domain.Services;
 using PawCast.Infrastructure.Clients;
+using PawCast.Infrastructure.Http;
 using PawCast.Infrastructure.Jobs;
 using PawCast.Infrastructure.Persistence;
 using PawCast.Infrastructure.Persistence.Repositories;
@@ -55,12 +56,24 @@ builder.Services.AddHttpClient("OpenMeteoWeather", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["OpenMeteo:WeatherBaseUrl"]!);
     client.Timeout = TimeSpan.FromSeconds(10);
+})
+.AddPolicyHandler((serviceProvider, _) =>
+{
+    var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("OpenMeteoWeatherPolicy");
+    return PollyPolicyFactory.CreateRetryPolicy(logger);
 });
 
 builder.Services.AddHttpClient("OpenMeteoAirQuality", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["OpenMeteo:AirQualityBaseUrl"]!);
     client.Timeout = TimeSpan.FromSeconds(10);
+})
+.AddPolicyHandler((serviceProvider, _) =>
+{
+    var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("OpenMeteoAirQualityPolicy");
+    return PollyPolicyFactory.CreateRetryPolicy(logger);
 });
 
 // Application / Domain / Infrastructure services
