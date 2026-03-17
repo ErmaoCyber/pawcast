@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using PawCast.Api.Models;
 using PawCast.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PawCast.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "user,ops")]
 public class WalkIndexController : ControllerBase
 {
     private readonly WalkIndexQueryService _service;

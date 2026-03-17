@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using PawCast.Application.Abstractions;
 using PawCast.Infrastructure.Jobs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PawCast.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "ops")]
 public class OpsController : ControllerBase
 {
     private readonly IFetchRunRepository _fetchRunRepository;
