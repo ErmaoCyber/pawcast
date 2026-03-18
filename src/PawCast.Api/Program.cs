@@ -1,3 +1,4 @@
+using System.Text;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
 using PawCast.Api.Auth;
 using PawCast.Api.Middleware;
@@ -17,7 +17,6 @@ using PawCast.Infrastructure.Http;
 using PawCast.Infrastructure.Jobs;
 using PawCast.Infrastructure.Persistence;
 using PawCast.Infrastructure.Persistence.Repositories;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -203,13 +202,20 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Hangfire dashboard
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
+if (app.Environment.IsDevelopment())
 {
-    Authorization = new IDashboardAuthorizationFilter[]
+    app.UseHangfireDashboard("/hangfire");
+}
+else
+{
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
     {
-        new HangfireDashboardAuthorizationFilter()
-    }
-});
+        Authorization = new IDashboardAuthorizationFilter[]
+        {
+            new HangfireDashboardAuthorizationFilter()
+        }
+    });
+}
 
 // Controllers
 app.MapControllers();
